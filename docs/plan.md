@@ -672,11 +672,13 @@ blitz-talks/
 - [x] Completed talks section with final vote counts (collapsible)
 - [x] Manual refresh button + auto-refresh (5s polling)
 
-### Phase 5: Polish
-- [ ] Responsive design (phone vs projector)
-- [ ] Error handling and edge cases
-- [ ] Loading states and optimistic updates
-- [ ] Smoke tests
+### Phase 5: Polish ✅
+- [x] Responsive design (phone vs projector)
+- [x] Error handling and edge cases (toast notifications with specific API messages)
+- [x] Loading states and optimistic updates (vote cast/withdraw)
+- [x] Smoke tests (5 total including vote endpoint auth check)
+- [x] Accessibility (aria-labels on icon-only buttons, QR code)
+- [x] Guard mock auth behind dev-only builds
 
 ---
 

@@ -1,5 +1,6 @@
 import { HttpRequest } from '@azure/functions';
 import { gamekeepersTable } from './storage.js';
+import { normalizeEmail } from './helpers.js';
 
 export interface AuthUser {
   userId: string;
@@ -56,7 +57,7 @@ export function formatDisplayName(fullName: string): string {
 export async function isGamekeeper(email: string): Promise<boolean> {
   if (!email) return false;
   try {
-    const entity = await gamekeepersTable.getEntity('gamekeeper', email.toLowerCase());
+    const entity = await gamekeepersTable.getEntity('gamekeeper', normalizeEmail(email));
     return !!entity;
   } catch (error: any) {
     if (error.statusCode === 404) return false;

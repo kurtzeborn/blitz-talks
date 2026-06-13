@@ -208,13 +208,11 @@ app.http('deleteTopic', {
       // Find and delete all votes on this topic, returning votes to voters
       const votesToDelete: VoteEntity[] = [];
       const voteEntities = votesTable.listEntities<VoteEntity>({
-        queryOptions: { filter: `PartitionKey eq '${sessionId}'` },
+        queryOptions: { filter: `PartitionKey eq '${sessionId}' and topicId eq '${topicId}'` },
       });
 
       for await (const vote of voteEntities) {
-        if (vote.topicId === topicId) {
-          votesToDelete.push(vote);
-        }
+        votesToDelete.push(vote);
       }
 
       // Return votes to each voter
@@ -226,8 +224,8 @@ app.http('deleteTopic', {
             rowKey: vote.voterEmail,
             votesUsed: Math.max(0, voter.votesUsed - vote.count),
           }, 'Merge');
-        } catch {
-          // Voter may have been removed — skip
+        } catch (error: any) {
+          if (error.statusCode !== 404) throw error;
         }
         await votesTable.deleteEntity(sessionId, vote.rowKey);
       }
@@ -243,8 +241,8 @@ app.http('deleteTopic', {
           rowKey: email,
           topicsSubmitted: Math.max(0, voter.topicsSubmitted - 1),
         }, 'Merge');
-      } catch {
-        // Voter record may not exist — skip
+      } catch (error: any) {
+        if (error.statusCode !== 404) throw error;
       }
 
       return { status: 204, body: undefined };
