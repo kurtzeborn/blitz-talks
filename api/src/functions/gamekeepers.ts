@@ -2,6 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { gamekeepersTable } from '../shared/storage.js';
 import { requireGamekeeper, AuthError } from '../shared/auth.js';
 import { GamekeeperEntity } from '../shared/types.js';
+import { sanitizeText } from '../shared/helpers.js';
 
 // GET /api/gamekeepers
 app.http('listGamekeepers', {
@@ -62,7 +63,7 @@ app.http('inviteGamekeeper', {
       const entity: GamekeeperEntity = {
         partitionKey: 'gamekeeper',
         rowKey: email,
-        displayName: (body.displayName || email.split('@')[0]).replace(/[<>]/g, ''),
+        displayName: sanitizeText(body.displayName || email.split('@')[0]),
         addedBy: user.userDetails,
         addedAt: new Date(),
       };

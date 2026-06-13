@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { sessionsTable } from '../shared/storage.js';
 import { requireGamekeeper, AuthError } from '../shared/auth.js';
 import { SessionEntity } from '../shared/types.js';
-import { validateSessionId, generateSessionCode, getSessionEntity } from '../shared/helpers.js';
+import { validateSessionId, generateSessionCode, getSessionEntity, sanitizeText } from '../shared/helpers.js';
 
 // POST /api/sessions
 app.http('createSession', {
@@ -39,7 +39,7 @@ app.http('createSession', {
       const entity: SessionEntity = {
         partitionKey: 'session',
         rowKey: sessionId,
-        name: name.replace(/[<>]/g, ''),
+        name: sanitizeText(name),
         status: 'active',
         voteIntervalMinutes,
         createdBy: user.userDetails,
@@ -196,7 +196,7 @@ app.http('updateSession', {
         if (name.length === 0 || name.length > 50) {
           return { status: 400, jsonBody: { error: 'Session name must be 1-50 characters' } };
         }
-        updates.name = name.replace(/[<>]/g, '');
+        updates.name = sanitizeText(name);
       }
 
       await sessionsTable.updateEntity(updates, 'Merge');

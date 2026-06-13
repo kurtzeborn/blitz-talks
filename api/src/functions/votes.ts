@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { votesTable, votersTable, topicsTable } from '../shared/storage.js';
 import { requireAuth, AuthError } from '../shared/auth.js';
 import { VoteEntity, VoterEntity, TopicEntity } from '../shared/types.js';
-import { resolveSession } from '../shared/helpers.js';
+import { resolveSession, normalizeEmail } from '../shared/helpers.js';
 
 const MIN_DISTINCT_FOR_STACKING = 3;
 
@@ -12,12 +12,10 @@ const MIN_DISTINCT_FOR_STACKING = 3;
 async function getVoterVotes(sessionId: string, email: string): Promise<VoteEntity[]> {
   const votes: VoteEntity[] = [];
   const entities = votesTable.listEntities<VoteEntity>({
-    queryOptions: { filter: `PartitionKey eq '${sessionId}'` },
+    queryOptions: { filter: `PartitionKey eq '${sessionId}' and voterEmail eq '${email}'` },
   });
   for await (const entity of entities) {
-    if (entity.voterEmail === email) {
-      votes.push(entity);
-    }
+    votes.push(entity);
   }
   return votes;
 }
@@ -67,7 +65,7 @@ app.http('getMyVotes', {
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const user = requireAuth(request);
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
 
       const result = await resolveSession(request);
       if ('error' in result) return result.error;
@@ -126,7 +124,7 @@ app.http('castVote', {
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const user = requireAuth(request);
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
 
       const result = await resolveSession(request, { requireActive: true });
       if ('error' in result) return result.error;
@@ -259,7 +257,7 @@ app.http('withdrawVote', {
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const user = requireAuth(request);
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
 
       const result = await resolveSession(request, { requireActive: true });
       if ('error' in result) return result.error;
@@ -314,7 +312,7 @@ app.http('withdrawVote', {
       }
 
       // Decrement voter's votesUsed
-      let voter: VoterEntity;
+      let voter: VoterEntity | undefined;
       try {
         voter = await votersTable.getEntity<VoterEntity>(sessionId, email);
         await votersTable.updateEntity({
@@ -322,8 +320,8 @@ app.http('withdrawVote', {
           rowKey: email,
           votesUsed: Math.max(0, voter.votesUsed - 1),
         }, 'Merge');
-      } catch {
-        // Voter not found — edge case, skip
+      } catch (error: any) {
+        if (error.statusCode !== 404) throw error;
       }
 
       // Decrement topic's voteCount
@@ -333,12 +331,13 @@ app.http('withdrawVote', {
         voteCount: Math.max(0, topic.voteCount - 1),
       }, 'Merge');
 
+      const remaining = voter ? voter.totalVotesGranted - voter.votesUsed + 1 : 0;
       return {
         status: 200,
         jsonBody: {
           topicId,
           count: vote.count - 1,
-          remaining: voter! ? voter.totalVotesGranted - voter.votesUsed + 1 : 0,
+          remaining,
         },
       };
     } catch (error) {

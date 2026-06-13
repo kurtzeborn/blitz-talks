@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { topicsTable, votersTable, votesTable } from '../shared/storage.js';
 import { requireAuth, requireGamekeeper, isGamekeeper, AuthError } from '../shared/auth.js';
 import { TopicEntity, VoterEntity, VoteEntity } from '../shared/types.js';
-import { validateSessionId, getSessionEntity, resolveSession } from '../shared/helpers.js';
+import { resolveSession, sanitizeText, normalizeEmail } from '../shared/helpers.js';
 import { randomUUID } from 'crypto';
 
 const MAX_TOPICS_PER_SESSION = 3;
@@ -16,7 +16,7 @@ app.http('submitTopic', {
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const user = requireAuth(request);
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
 
       const result = await resolveSession(request, { requireActive: true });
       if ('error' in result) return result.error;
@@ -56,7 +56,7 @@ app.http('submitTopic', {
       const topicEntity: TopicEntity = {
         partitionKey: sessionId,
         rowKey: topicId,
-        title: title.replace(/[<>]/g, ''),
+        title: sanitizeText(title),
         submittedBy: email,
         speakerName: voter.displayName,
         status: 'pending',
@@ -173,12 +173,11 @@ app.http('deleteTopic', {
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const user = requireAuth(request);
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
 
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
+      const result = await resolveSession(request, { requireActive: true });
+      if ('error' in result) return result.error;
+      const { sessionId } = result;
 
       const topicId = request.params.topicId;
       if (!topicId) {
@@ -268,10 +267,9 @@ app.http('updateTopic', {
     try {
       await requireGamekeeper(request);
 
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
+      const result = await resolveSession(request);
+      if ('error' in result) return result.error;
+      const { sessionId } = result;
 
       const topicId = request.params.topicId;
       if (!topicId) {

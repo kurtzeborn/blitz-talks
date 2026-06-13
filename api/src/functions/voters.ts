@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { votersTable } from '../shared/storage.js';
 import { requireAuth, AuthError } from '../shared/auth.js';
 import { VoterEntity } from '../shared/types.js';
-import { resolveSession } from '../shared/helpers.js';
+import { resolveSession, normalizeEmail, sanitizeText } from '../shared/helpers.js';
 
 // GET /api/sessions/:id/voter
 app.http('getVoter', {
@@ -17,7 +17,7 @@ app.http('getVoter', {
       if ('error' in result) return result.error;
       const { sessionId } = result;
 
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
       try {
         const voter = await votersTable.getEntity<VoterEntity>(sessionId, email);
         return {
@@ -73,7 +73,7 @@ app.http('registerVoter', {
         return { status: 400, jsonBody: { error: 'Display name must be 1-30 characters' } };
       }
 
-      const email = user.userDetails.toLowerCase();
+      const email = normalizeEmail(user.userDetails);
 
       // Check if already registered
       try {
@@ -86,7 +86,7 @@ app.http('registerVoter', {
       const entity: VoterEntity = {
         partitionKey: sessionId,
         rowKey: email,
-        displayName: displayName.replace(/[<>]/g, ''),
+        displayName: sanitizeText(displayName),
         topicsSubmitted: 0,
         totalVotesGranted: 0,
         votesUsed: 0,

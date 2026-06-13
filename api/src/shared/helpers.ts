@@ -5,6 +5,20 @@ import { SessionEntity } from './types.js';
 const SESSION_ID_PATTERN = /^[A-Z0-9]{4}$/;
 
 /**
+ * Strip angle brackets from user-provided text to prevent XSS.
+ */
+export function sanitizeText(text: string): string {
+  return text.replace(/[<>]/g, '');
+}
+
+/**
+ * Normalize an email to lowercase for consistent lookups.
+ */
+export function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim();
+}
+
+/**
  * Validate and normalize a session ID from request params.
  */
 export function validateSessionId(raw: string | undefined): string | null {
