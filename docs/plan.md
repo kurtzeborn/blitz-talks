@@ -688,11 +688,13 @@ blitz-talks/
 
 ---
 
-## Appendix A: Original Requirements
+## Appendix A: Original Prompt
 
-> A multi-day activity around "lightning talks." Early in the event, invite people to scan a QR code which brings them to a page where they can enter their name and a cool topic they feel comfortable talking about for 5 minutes. After they enter their name and topic, they can return to the site to view all the other topics proposed and vote on the ones they would like to hear. On their phone they would only see the topics, not the speaker names. For voting, they can't have unlimited votes — they get 3 votes immediately after entering their own name and topic, and then every 2-3 hours they could return to the site to get another vote.
+> I want to create a new site for a multi-day activity we will do around "lightning talks". The basic idea is that early in the multi-day event we invite people to scan a QR code which brings them to a page where they can enter their name and a cool topic they feel comfortable to talk about for 5 minutes. After they enter their name and topic, they can return to the site to view all the other topics proposed and vote on the ones they would like to here. On their phone they would only see the topics, not the speaker names. For voting, they can't have unlimited votes, but they should be able to add votes later. I'm thinking they get 3 votes immediately after they enter their own name and topic and then maybe every 2-3 hours they could return to the site to get another vote.
 >
-> A gamekeeper dashboard view projected which shows the full list of topics (with a button to reveal the speaker names) ordered by number of votes received. Once a speaker takes their turn, the gamekeeper can mark the talk complete and it would be moved to another list of completed talks.
+> There would be a gamekeeper dashboard view as well that could be projected which would show the full list of topics (with a button to reveal the speaker names) ordered by the number of votes received. Once a speaker takes their turn, the gamekeeper can mark the talk complete and it would be moved to another list of completed talks.
+>
+> All resources for this site should be put in the "MSDN Subscription" sub on Azure. The subdomain for this site should be blitz.k61.dev. Use an SWA standard tier on this.
 
 ### Key Decisions from Design Discussion
 - **Microsoft login for all users** — eliminates localStorage fragility over multi-day events
