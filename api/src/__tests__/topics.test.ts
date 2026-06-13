@@ -1,36 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Mock storage before imports
-const mockGetEntity = vi.fn();
-const mockCreateEntity = vi.fn();
-const mockUpdateEntity = vi.fn();
-const mockListEntities = vi.fn();
-const mockDeleteEntity = vi.fn();
-
-vi.mock('../shared/storage.js', () => ({
-  topicsTable: {
-    getEntity: mockGetEntity,
-    createEntity: mockCreateEntity,
-    updateEntity: mockUpdateEntity,
-    listEntities: mockListEntities,
-    deleteEntity: mockDeleteEntity,
-  },
-  votersTable: {
-    getEntity: mockGetEntity,
-    createEntity: mockCreateEntity,
-    updateEntity: mockUpdateEntity,
-  },
-  votesTable: {
-    listEntities: mockListEntities,
-    deleteEntity: mockDeleteEntity,
-  },
-  sessionsTable: {
-    getEntity: vi.fn(),
-  },
-  gamekeepersTable: {
-    getEntity: vi.fn(),
-  },
-}));
+import { describe, it, expect } from 'vitest';
 
 describe('Topic validation', () => {
   it('should reject titles over 100 characters', () => {

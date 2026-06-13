@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { topicsTable, votersTable, votesTable } from '../shared/storage.js';
 import { requireAuth, requireGamekeeper, isGamekeeper, AuthError } from '../shared/auth.js';
 import { TopicEntity, VoterEntity, VoteEntity } from '../shared/types.js';
-import { validateSessionId, getSessionEntity } from '../shared/helpers.js';
+import { validateSessionId, getSessionEntity, resolveSession } from '../shared/helpers.js';
 import { randomUUID } from 'crypto';
 
 const MAX_TOPICS_PER_SESSION = 3;
@@ -18,19 +18,9 @@ app.http('submitTopic', {
       const user = requireAuth(request);
       const email = user.userDetails.toLowerCase();
 
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
-
-      const session = await getSessionEntity(sessionId);
-      if (!session) {
-        return { status: 404, jsonBody: { error: 'Session not found' } };
-      }
-
-      if (session.status !== 'active') {
-        return { status: 400, jsonBody: { error: 'Session is archived' } };
-      }
+      const result = await resolveSession(request, { requireActive: true });
+      if ('error' in result) return result.error;
+      const { sessionId } = result;
 
       let body: { title?: string } = {};
       try {
@@ -121,15 +111,9 @@ app.http('listTopics', {
     try {
       const user = requireAuth(request);
 
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
-
-      const session = await getSessionEntity(sessionId);
-      if (!session) {
-        return { status: 404, jsonBody: { error: 'Session not found' } };
-      }
+      const result = await resolveSession(request);
+      if ('error' in result) return result.error;
+      const { sessionId } = result;
 
       const keeperStatus = await isGamekeeper(user.userDetails);
 

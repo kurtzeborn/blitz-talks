@@ -1,3 +1,4 @@
+import { HttpRequest } from '@azure/functions';
 import { sessionsTable } from './storage.js';
 import { SessionEntity } from './types.js';
 
@@ -38,4 +39,29 @@ export async function generateSessionCode(): Promise<string> {
     if (!existing) return code;
   }
   throw new Error('Failed to generate unique session code after 10 attempts');
+}
+
+/**
+ * Validate the session ID from request params and fetch the session entity.
+ * Returns { sessionId, session } or an error response.
+ */
+export async function resolveSession(
+  request: HttpRequest,
+  opts?: { requireActive?: boolean }
+): Promise<{ sessionId: string; session: SessionEntity } | { error: { status: number; jsonBody: { error: string } } }> {
+  const sessionId = validateSessionId(request.params.sessionId);
+  if (!sessionId) {
+    return { error: { status: 400, jsonBody: { error: 'Invalid session ID' } } };
+  }
+
+  const session = await getSessionEntity(sessionId);
+  if (!session) {
+    return { error: { status: 404, jsonBody: { error: 'Session not found' } } };
+  }
+
+  if (opts?.requireActive && session.status !== 'active') {
+    return { error: { status: 400, jsonBody: { error: 'Session is archived' } } };
+  }
+
+  return { sessionId, session };
 }

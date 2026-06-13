@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { votersTable } from '../shared/storage.js';
 import { requireAuth, AuthError } from '../shared/auth.js';
 import { VoterEntity } from '../shared/types.js';
-import { validateSessionId, getSessionEntity } from '../shared/helpers.js';
+import { resolveSession } from '../shared/helpers.js';
 
 // GET /api/sessions/:id/voter
 app.http('getVoter', {
@@ -13,15 +13,9 @@ app.http('getVoter', {
     try {
       const user = requireAuth(request);
 
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
-
-      const session = await getSessionEntity(sessionId);
-      if (!session) {
-        return { status: 404, jsonBody: { error: 'Session not found' } };
-      }
+      const result = await resolveSession(request);
+      if ('error' in result) return result.error;
+      const { sessionId } = result;
 
       const email = user.userDetails.toLowerCase();
       try {
@@ -63,19 +57,9 @@ app.http('registerVoter', {
     try {
       const user = requireAuth(request);
 
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
-
-      const session = await getSessionEntity(sessionId);
-      if (!session) {
-        return { status: 404, jsonBody: { error: 'Session not found' } };
-      }
-
-      if (session.status !== 'active') {
-        return { status: 400, jsonBody: { error: 'Session is archived' } };
-      }
+      const result = await resolveSession(request, { requireActive: true });
+      if ('error' in result) return result.error;
+      const { sessionId } = result;
 
       let body: { displayName?: string } = {};
       try {

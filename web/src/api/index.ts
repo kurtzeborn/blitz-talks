@@ -1,4 +1,4 @@
-import type { AuthStatus, Session, Gamekeeper, Topic, VoterStatus } from '../types';
+import type { AuthStatus, Session, Gamekeeper, Topic, VoterStatus, VoteStatus } from '../types';
 
 const API_BASE = '/api';
 
@@ -21,11 +21,14 @@ export class ApiError extends Error {
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const authHeaders = getAuthHeader();
+  const headers: Record<string, string> = { ...authHeaders };
+  if (options?.body) {
+    headers['Content-Type'] = 'application/json';
+  }
   const response = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
+      ...headers,
       ...options?.headers,
     },
   });
@@ -124,4 +127,21 @@ export async function updateTopicStatus(sessionId: string, topicId: string, stat
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
+}
+
+// ============ Votes ============
+
+export async function fetchVoteStatus(sessionId: string): Promise<VoteStatus> {
+  return apiFetch<VoteStatus>(`/sessions/${sessionId}/votes/me`);
+}
+
+export async function castVote(sessionId: string, topicId: string): Promise<{ topicId: string; count: number; remaining: number }> {
+  return apiFetch(`/sessions/${sessionId}/votes`, {
+    method: 'POST',
+    body: JSON.stringify({ topicId }),
+  });
+}
+
+export async function withdrawVote(sessionId: string, topicId: string): Promise<{ topicId: string; count: number; remaining: number }> {
+  return apiFetch(`/sessions/${sessionId}/votes/${topicId}`, { method: 'DELETE' });
 }

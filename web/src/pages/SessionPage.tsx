@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAuthStatus, fetchSession, fetchVoterStatus, registerVoter, fetchTopics, submitTopic, deleteTopic } from '../api';
-import type { Topic } from '../types';
+import { fetchAuthStatus, fetchSession, fetchVoterStatus, registerVoter, fetchTopics, submitTopic, deleteTopic, fetchVoteStatus, castVote, withdrawVote } from '../api';
+import type { Topic, VoteStatus } from '../types';
 
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -31,6 +31,13 @@ export function SessionPage() {
     queryFn: () => fetchTopics(sessionId!),
     enabled: !!session && voter?.registered === true,
     refetchInterval: 10_000,
+  });
+
+  const { data: voteStatus } = useQuery({
+    queryKey: ['voteStatus', sessionId],
+    queryFn: () => fetchVoteStatus(sessionId!),
+    enabled: !!session && voter?.registered === true && (voter?.topicsSubmitted ?? 0) > 0,
+    refetchInterval: 30_000,
   });
 
   if (authLoading) {
@@ -78,6 +85,7 @@ export function SessionPage() {
       sessionName={session.name}
       voter={voter}
       topics={topics || []}
+      voteStatus={voteStatus}
       queryClient={queryClient}
     />
   );
@@ -157,18 +165,24 @@ interface SessionViewProps {
   sessionName: string;
   voter: { topicsSubmitted?: number; totalVotesGranted?: number; votesUsed?: number; displayName?: string };
   topics: Topic[];
+  voteStatus?: VoteStatus;
   queryClient: ReturnType<typeof useQueryClient>;
 }
 
-function SessionView({ sessionId, sessionName, voter, topics, queryClient }: SessionViewProps) {
+function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryClient }: SessionViewProps) {
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [newTopicTitle, setNewTopicTitle] = useState('');
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['topics', sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['voter', sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['voteStatus', sessionId] });
+  };
 
   const submitMutation = useMutation({
     mutationFn: (title: string) => submitTopic(sessionId, title),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['voter', sessionId] });
+      invalidateAll();
       setNewTopicTitle('');
       setShowTopicForm(false);
     },
@@ -176,10 +190,17 @@ function SessionView({ sessionId, sessionName, voter, topics, queryClient }: Ses
 
   const deleteMutation = useMutation({
     mutationFn: (topicId: string) => deleteTopic(sessionId, topicId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['voter', sessionId] });
-    },
+    onSuccess: invalidateAll,
+  });
+
+  const voteMutation = useMutation({
+    mutationFn: (topicId: string) => castVote(sessionId, topicId),
+    onSuccess: invalidateAll,
+  });
+
+  const unvoteMutation = useMutation({
+    mutationFn: (topicId: string) => withdrawVote(sessionId, topicId),
+    onSuccess: invalidateAll,
   });
 
   const handleSubmitTopic = (e: React.FormEvent) => {
@@ -264,15 +285,8 @@ function SessionView({ sessionId, sessionName, voter, topics, queryClient }: Ses
         )}
 
         {/* Vote status bar */}
-        {hasSubmittedTopic && (
-          <div className="mb-6 p-3 bg-gray-800 rounded-lg flex items-center justify-between">
-            <span className="text-sm text-gray-300">
-              Votes remaining: <span className="font-bold text-white">{remaining}</span>
-            </span>
-            <span className="text-xs text-gray-500">
-              Voting coming in Phase 3
-            </span>
-          </div>
+        {hasSubmittedTopic && voteStatus && (
+          <VoteStatusBar voteStatus={voteStatus} />
         )}
 
         {/* Topics list */}
@@ -283,8 +297,12 @@ function SessionView({ sessionId, sessionName, voter, topics, queryClient }: Ses
               <TopicCard
                 key={topic.id}
                 topic={topic}
+                voteStatus={voteStatus}
                 onDelete={topic.isOwn ? () => deleteMutation.mutate(topic.id) : undefined}
                 isDeleting={deleteMutation.isPending}
+                onVote={voteStatus?.canVote ? () => voteMutation.mutate(topic.id) : undefined}
+                onUnvote={voteStatus?.canVote ? () => unvoteMutation.mutate(topic.id) : undefined}
+                voting={voteMutation.isPending || unvoteMutation.isPending}
               />
             ))}
           </div>
@@ -301,9 +319,59 @@ function SessionView({ sessionId, sessionName, voter, topics, queryClient }: Ses
   );
 }
 
+// --- Vote Status Bar ---
+
+function VoteStatusBar({ voteStatus }: { voteStatus: VoteStatus }) {
+  const [countdown, setCountdown] = useState('');
+
+  useEffect(() => {
+    if (!voteStatus.nextVoteAt) return;
+    const target = new Date(voteStatus.nextVoteAt).getTime();
+    const tick = () => {
+      const diff = target - Date.now();
+      if (diff <= 0) {
+        setCountdown('now');
+        return;
+      }
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setCountdown(`${mins}:${secs.toString().padStart(2, '0')}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [voteStatus.nextVoteAt]);
+
+  return (
+    <div className="mb-6 p-3 bg-gray-800 rounded-lg flex items-center justify-between">
+      <span className="text-sm text-gray-300">
+        Votes: <span className="font-bold text-white">{voteStatus.remaining}</span> remaining
+        <span className="text-gray-500 ml-2">({voteStatus.used}/{voteStatus.totalGranted} used)</span>
+      </span>
+      {voteStatus.nextVoteAt && countdown !== 'now' && (
+        <span className="text-xs text-gray-400">+1 in {countdown}</span>
+      )}
+      {countdown === 'now' && (
+        <span className="text-xs text-green-400">+1 vote available — refresh</span>
+      )}
+    </div>
+  );
+}
+
 // --- Topic card ---
 
-function TopicCard({ topic, onDelete, isDeleting }: { topic: Topic; onDelete?: () => void; isDeleting: boolean }) {
+function TopicCard({ topic, voteStatus, onDelete, isDeleting, onVote, onUnvote, voting }: {
+  topic: Topic;
+  voteStatus?: VoteStatus;
+  onDelete?: () => void;
+  isDeleting: boolean;
+  onVote?: () => void;
+  onUnvote?: () => void;
+  voting: boolean;
+}) {
+  const myVotes = voteStatus?.allocations?.find(a => a.topicId === topic.id)?.count ?? 0;
+  const hasVotesRemaining = (voteStatus?.remaining ?? 0) > 0;
+
   return (
     <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
       <div className="flex items-start justify-between gap-3">
@@ -313,13 +381,39 @@ function TopicCard({ topic, onDelete, isDeleting }: { topic: Topic; onDelete?: (
             <span className="text-xs text-blue-400">Your topic</span>
           )}
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-lg font-bold text-gray-300">{topic.voteCount}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Vote controls */}
+          {onUnvote && myVotes > 0 && (
+            <button
+              onClick={onUnvote}
+              disabled={voting}
+              className="w-7 h-7 flex items-center justify-center rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 text-sm"
+              title="Remove a vote"
+            >
+              −
+            </button>
+          )}
+          <span className="text-lg font-bold text-gray-300 min-w-[2ch] text-center" title={`${topic.voteCount} total votes${myVotes > 0 ? ` (${myVotes} yours)` : ''}`}>
+            {topic.voteCount}
+          </span>
+          {onVote && hasVotesRemaining && (
+            <button
+              onClick={onVote}
+              disabled={voting}
+              className="w-7 h-7 flex items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm"
+              title="Add a vote"
+            >
+              +
+            </button>
+          )}
+          {myVotes > 0 && (
+            <span className="text-xs text-blue-400 ml-1">×{myVotes}</span>
+          )}
           {onDelete && (
             <button
               onClick={onDelete}
               disabled={isDeleting}
-              className="text-red-400 hover:text-red-300 text-xs disabled:opacity-50"
+              className="text-red-400 hover:text-red-300 text-xs disabled:opacity-50 ml-1"
               title="Delete topic"
             >
               ✕
