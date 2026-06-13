@@ -220,6 +220,7 @@ interface Voter {
   topicsSubmitted: number;     // Must be ≥1 to vote
   totalVotesGranted: number;   // Starts at 3, +1 per qualifying visit
   votesUsed: number;           // Sum of all vote counts (denormalized)
+  distinctTopicsVoted: number; // Lifetime count of unique topics voted on (never decrements)
   lastVoteGrantedAt: string;   // ISO 8601 — when last vote was granted
   registeredAt: string;        // ISO 8601
 }
@@ -257,16 +258,22 @@ interface Gamekeeper {
 - This encourages frequent return visits
 
 ### Vote Stacking Rules
-| Votes Used So Far | Can Stack on Same Topic? |
-|-------------------|-------------------------|
-| 0-2 (first 3 votes) | No — must vote for 3 different topics |
-| 3+ (subsequent votes) | Yes — can add more votes to any topic |
+
+The 3-distinct-topics requirement is a **lifetime milestone** — once a participant has voted on 3 different topics, stacking is permanently unlocked for that session, even if they later withdraw votes.
+
+| Distinct Topics Voted (lifetime) | Can Stack on Same Topic? |
+|----------------------------------|-------------------------|
+| 0-2 | No — must vote for a topic not yet voted on |
+| 3+ | Yes — can add more votes to any topic |
+
+The `distinctTopicsVoted` counter on the voter record **never decrements** — it tracks the number of unique topics the voter has ever voted on, not current active votes.
 
 ### Vote Withdrawal
 - Participants can remove votes from any **pending** topic and reallocate them
 - Votes on **completed** talks are locked — cannot be withdrawn
 - Withdrawal decrements `votesUsed` and frees the vote for reuse
-- The freed vote follows current stacking rules (if total used would drop below 3, the re-placed vote must go to a new topic)
+- Withdrawal does **not** decrement `distinctTopicsVoted` — the milestone is permanent
+- After withdrawal, the freed vote follows current stacking rules based on `distinctTopicsVoted`
 
 ### Server-Side Enforcement
 All vote logic is server-side. The client displays remaining votes and next-refresh countdown but cannot manipulate the budget.
@@ -275,7 +282,7 @@ All vote logic is server-side. The client displays remaining votes and next-refr
 remainingVotes = totalVotesGranted - votesUsed
 nextVoteAt = lastVoteGrantedAt + voteIntervalMinutes
 canVoteForTopic(topicId) = 
-  if votesUsed < 3: no existing vote on this topic
+  if distinctTopicsVoted < 3: no existing vote on this topic
   else: true (stacking allowed)
 ```
 
@@ -679,8 +686,8 @@ blitz-talks/
 | User tries to vote before submitting a topic | API rejects; UI shows "Submit a topic first to unlock voting" |
 | Gamekeeper marks talk complete | Topic disappears from participant view; votes on it are locked |
 | User withdraws vote from completed talk | Not allowed — API rejects |
-| User has 2 votes used, withdraws 1, re-votes | Re-vote must go to a new topic (still in first-3-distinct phase) |
-| User has 3+ votes used, withdraws 1, re-votes | Re-vote can go to any topic (stacking allowed) |
+| User voted on 2 distinct topics, withdraws 1, re-votes | Must vote for a 3rd distinct topic (milestone not yet reached) |
+| User voted on 3+ distinct topics, withdraws any, re-votes | Can re-vote on any topic including ones already voted on (milestone permanent) |
 | Session code collision | Generate new code and retry (4-char = 1.6M combinations) |
 | User signs in with different MS account | Treated as a separate participant — must submit topic to vote |
 | All topics completed | Dashboard shows "All talks complete!" — no pending topics remain |
