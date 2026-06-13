@@ -99,7 +99,7 @@ Required because SWA's built-in AAD provider only supports work/school accounts.
 A user can sign in with different Microsoft accounts. Each account is a separate participant — each must submit ≥1 topic to vote. This is by design (low risk, self-correcting).
 
 ### Display Name
-- Auto-populated from Microsoft profile `name` claim
+- Auto-populated from Microsoft profile `name` claim as **first name + last initial** (e.g., "Scott K." from "Scott Kurtzeborn")
 - Shown in a "Confirm your name" step on first registration for a session
 - Editable — user can change to a nickname
 - Stored per-session (not globally)
@@ -697,7 +697,7 @@ blitz-talks/
 ### Key Decisions from Design Discussion
 - **Microsoft login for all users** — eliminates localStorage fragility over multi-day events
 - **Custom Entra ID app** — supports personal + work/school Microsoft accounts
-- **Display name from claims** — pre-filled from Microsoft profile, editable on first registration
+- **Display name from claims** — pre-filled as first name + last initial from Microsoft profile, editable on first registration
 - **Vote regeneration: max 1 per visit** — encourages frequent returns rather than rewarding long absences
 - **First 3 votes on distinct topics** — ensures broad initial engagement
 - **Later votes can stack** — allows participants to champion a favorite topic
