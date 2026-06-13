@@ -65,7 +65,7 @@ jobs:
             --tags project=blitz-talks environment=prod
 
       - name: Deploy Bicep
-        uses: azure/arm-deploy@v3
+        uses: azure/arm-deploy@v2
         with:
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: ./infra/main.bicep
