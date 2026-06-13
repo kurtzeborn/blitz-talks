@@ -1,0 +1,11 @@
+# Ignore local settings
+local.settings.json
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# IDE
+.vscode/
