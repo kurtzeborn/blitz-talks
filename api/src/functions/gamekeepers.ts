@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { gamekeepersTable } from '../shared/storage.js';
 import { requireGamekeeper, AuthError } from '../shared/auth.js';
 import { GamekeeperEntity } from '../shared/types.js';
-import { sanitizeText } from '../shared/helpers.js';
+import { sanitizeText, normalizeEmail } from '../shared/helpers.js';
 
 // GET /api/gamekeepers
 app.http('listGamekeepers', {
@@ -55,7 +55,7 @@ app.http('inviteGamekeeper', {
         return { status: 400, jsonBody: { error: 'email is required' } };
       }
 
-      const email = body.email.toLowerCase().trim();
+      const email = normalizeEmail(body.email);
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return { status: 400, jsonBody: { error: 'Invalid email format' } };
       }
@@ -99,13 +99,13 @@ app.http('removeGamekeeper', {
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
       const user = await requireGamekeeper(request);
-      const email = request.params.email?.toLowerCase();
+      const email = normalizeEmail(request.params.email || '');
 
       if (!email) {
         return { status: 400, jsonBody: { error: 'Email is required' } };
       }
 
-      if (email === user.userDetails.toLowerCase()) {
+      if (email === normalizeEmail(user.userDetails)) {
         return { status: 400, jsonBody: { error: 'You cannot remove yourself' } };
       }
 

@@ -108,7 +108,7 @@ export function SessionDashboardPage() {
         {/* QR Code + Session Code */}
         <div className="flex items-center gap-8 mb-8 p-6 bg-gray-800 rounded-xl">
           <div className="bg-white p-3 rounded-lg">
-            <QRCodeSVG value={sessionUrl} size={180} />
+            <QRCodeSVG value={sessionUrl} size={180} aria-label={`QR code to join session ${sessionId}`} />
           </div>
           <div>
             <p className="text-gray-400 text-sm mb-1">Scan to submit &amp; vote</p>
@@ -141,7 +141,7 @@ export function SessionDashboardPage() {
                 <tr className="border-b border-gray-700">
                   <th className="text-left p-4 text-gray-400 font-medium w-12">#</th>
                   <th className="text-left p-4 text-gray-400 font-medium">Topic</th>
-                  {showNames && <th className="text-left p-4 text-gray-400 font-medium w-48">Speaker</th>}
+                  {showNames && <th className="text-left p-4 text-gray-400 font-medium w-48 hidden md:table-cell">Speaker</th>}
                   <th className="text-center p-4 text-gray-400 font-medium w-24">Votes</th>
                   <th className="text-center p-4 text-gray-400 font-medium w-28"></th>
                 </tr>
@@ -151,7 +151,7 @@ export function SessionDashboardPage() {
                   <tr key={topic.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                     <td className="p-4 text-gray-500 text-lg">{i + 1}</td>
                     <td className="p-4 font-medium text-xl">{topic.title}</td>
-                    {showNames && <td className="p-4 text-gray-300 text-lg">{topic.speakerName}</td>}
+                    {showNames && <td className="p-4 text-gray-300 text-lg hidden md:table-cell">{topic.speakerName}</td>}
                     <td className="p-4 text-center text-2xl font-bold">{topic.voteCount}</td>
                     <td className="p-4 text-center">
                       <button
@@ -192,7 +192,7 @@ export function SessionDashboardPage() {
                     {completedTopics.map((topic: Topic) => (
                       <tr key={topic.id} className="border-b border-gray-700/50">
                         <td className="p-4 text-gray-400 text-lg">{topic.title}</td>
-                        {showNames && <td className="p-4 text-gray-500 w-48">{topic.speakerName}</td>}
+                        {showNames && <td className="p-4 text-gray-500 w-48 hidden md:table-cell">{topic.speakerName}</td>}
                         <td className="p-4 text-center text-gray-500 text-lg w-24">{topic.voteCount}</td>
                         <td className="p-4 text-center w-28">
                           <button

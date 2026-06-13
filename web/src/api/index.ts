@@ -3,9 +3,11 @@ import type { AuthStatus, Session, Gamekeeper, Topic, VoterStatus, VoteStatus } 
 const API_BASE = '/api';
 
 function getAuthHeader(): Record<string, string> {
-  const mockPrincipal = localStorage.getItem('mockAuthPrincipal');
-  if (mockPrincipal) {
-    return { 'x-ms-client-principal': btoa(mockPrincipal) };
+  if (import.meta.env.DEV) {
+    const mockPrincipal = localStorage.getItem('mockAuthPrincipal');
+    if (mockPrincipal) {
+      return { 'x-ms-client-principal': btoa(mockPrincipal) };
+    }
   }
   return {};
 }

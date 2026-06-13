@@ -637,39 +637,40 @@ blitz-talks/
 
 ## 19. Development Phases
 
-### Phase 1: Foundation
-- [ ] Initialize repo structure (web + api + infra + tests)
-- [ ] Set up Bicep infrastructure (SWA Standard + Storage)
-- [ ] Create Entra ID app registration (multi-tenant + personal accounts)
-- [ ] Configure GitHub Actions CI/CD (lint, build, test, deploy, smoke)
-- [ ] Set up local development environment (Azurite + SWA CLI)
-- [ ] Implement auth flow (Microsoft sign-in for all users)
-- [ ] Gamekeeper allowlist (Entra ID + email check)
-- [ ] Deploy infrastructure + configure custom domain (blitz.k61.dev)
+### Phase 1: Foundation ✅
+- [x] Initialize repo structure (web + api + infra + tests)
+- [x] Set up Bicep infrastructure (SWA Standard + Storage)
+- [x] Create Entra ID app registration (multi-tenant + personal accounts)
+- [x] Configure GitHub Actions CI/CD (lint, build, test, deploy, smoke)
+- [x] Set up local development environment (Azurite + SWA CLI)
+- [x] Implement auth flow (Microsoft sign-in for all users)
+- [x] Gamekeeper allowlist (Entra ID + email check)
+- [x] Deploy infrastructure + configure custom domain (blitz.k61.dev)
 
-### Phase 2: Sessions & Topics
-- [ ] Session CRUD (gamekeeper creates, lists, archives)
-- [ ] QR code generation on gamekeeper dashboard
-- [ ] Participant registration flow (confirm name from MS profile)
-- [ ] Topic submission (1-3 per session, validation)
-- [ ] Topic listing (title + votes for participants, full data for gamekeeper)
-- [ ] Topic deletion (own pending topics only)
+### Phase 2: Sessions & Topics ✅
+- [x] Session CRUD (gamekeeper creates, lists, archives)
+- [x] QR code generation on gamekeeper dashboard
+- [x] Participant registration flow (confirm name from MS profile)
+- [x] Topic submission (1-3 per session, validation)
+- [x] Topic listing (title + votes for participants, full data for gamekeeper)
+- [x] Topic deletion (own pending topics only)
 
-### Phase 3: Voting
-- [ ] Initial vote grant (3 votes on first topic submission)
-- [ ] Vote casting with distinct-topic enforcement for first 3
-- [ ] Vote stacking for subsequent votes
-- [ ] Vote withdrawal and reallocation
-- [ ] Vote regeneration (+1 per qualifying visit)
-- [ ] Vote status display (remaining votes, next refresh countdown)
-- [ ] Voting unit tests (budget, stacking, withdrawal, regeneration)
+### Phase 3: Voting ✅
+- [x] Initial vote grant (3 votes on first topic submission)
+- [x] Vote casting with distinct-topic enforcement for first 3
+- [x] Vote stacking for subsequent votes
+- [x] Vote withdrawal and reallocation
+- [x] Vote regeneration (+1 per qualifying visit)
+- [x] Vote status display (remaining votes, next refresh countdown)
+- [x] Voting unit tests (budget, stacking, withdrawal, regeneration)
 
-### Phase 4: Gamekeeper Dashboard
-- [ ] Projected dashboard layout (large fonts, QR code)
-- [ ] Topic ranking by vote count
-- [ ] Speaker name reveal toggle
-- [ ] Mark talk as complete (moves to completed list, locks votes)
-- [ ] Completed talks section with final vote counts
+### Phase 4: Gamekeeper Dashboard ✅
+- [x] Projected dashboard layout (large fonts, QR code)
+- [x] Topic ranking by vote count
+- [x] Speaker name reveal toggle
+- [x] Mark talk as complete (confirmation dialog, moves to completed list, locks votes)
+- [x] Completed talks section with final vote counts (collapsible)
+- [x] Manual refresh button + auto-refresh (5s polling)
 
 ### Phase 5: Polish
 - [ ] Responsive design (phone vs projector)

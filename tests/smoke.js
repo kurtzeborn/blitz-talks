@@ -45,6 +45,11 @@ await test('Protected API requires auth', async () => {
   assert(res.status === 401 || res.status === 302 || res.redirected, `Expected auth challenge, got ${res.status}`);
 });
 
+await test('Vote API requires auth', async () => {
+  const res = await fetch(`${BASE_URL}/api/sessions/TEST/votes/me`);
+  assert(res.status === 401 || res.status === 302 || res.redirected, `Expected auth challenge, got ${res.status}`);
+});
+
 await test('Static assets load', async () => {
   const res = await fetch(BASE_URL);
   const html = await res.text();

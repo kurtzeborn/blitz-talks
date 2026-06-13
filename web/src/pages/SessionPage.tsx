@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAuthStatus, fetchSession, fetchVoterStatus, registerVoter, fetchTopics, submitTopic, deleteTopic, fetchVoteStatus, castVote, withdrawVote } from '../api';
+import { ApiError, fetchAuthStatus, fetchSession, fetchVoterStatus, registerVoter, fetchTopics, submitTopic, deleteTopic, fetchVoteStatus, castVote, withdrawVote } from '../api';
 import type { Topic, VoteStatus } from '../types';
+import { useToast } from '../hooks/useToast';
+import { ToastContainer } from '../components/Toast';
 
 export function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -151,7 +153,9 @@ function RegistrationForm({ sessionId, suggestedName }: { sessionId: string; sug
           {registerMutation.isPending ? 'Joining...' : 'Join Session'}
         </button>
         {registerMutation.isError && (
-          <p className="text-red-400 text-sm text-center">Failed to join. Please try again.</p>
+          <p className="text-red-400 text-sm text-center">
+            {registerMutation.error instanceof ApiError ? registerMutation.error.message : 'Failed to join. Please try again.'}
+          </p>
         )}
       </form>
     </div>
@@ -172,6 +176,7 @@ interface SessionViewProps {
 function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryClient }: SessionViewProps) {
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [newTopicTitle, setNewTopicTitle] = useState('');
+  const { toasts, addToast, removeToast } = useToast();
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['topics', sessionId] });
@@ -185,22 +190,84 @@ function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryC
       invalidateAll();
       setNewTopicTitle('');
       setShowTopicForm(false);
+      addToast('Topic submitted!', 'success');
+    },
+    onError: (error) => {
+      addToast(error instanceof ApiError ? error.message : 'Failed to submit topic');
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (topicId: string) => deleteTopic(sessionId, topicId),
-    onSuccess: invalidateAll,
+    onSuccess: () => {
+      invalidateAll();
+      addToast('Topic deleted', 'info');
+    },
+    onError: (error) => {
+      addToast(error instanceof ApiError ? error.message : 'Failed to delete topic');
+    },
   });
 
   const voteMutation = useMutation({
     mutationFn: (topicId: string) => castVote(sessionId, topicId),
-    onSuccess: invalidateAll,
+    onMutate: async (topicId) => {
+      await queryClient.cancelQueries({ queryKey: ['topics', sessionId] });
+      await queryClient.cancelQueries({ queryKey: ['voteStatus', sessionId] });
+      const prevTopics = queryClient.getQueryData<Topic[]>(['topics', sessionId]);
+      const prevVoteStatus = queryClient.getQueryData<VoteStatus>(['voteStatus', sessionId]);
+      queryClient.setQueryData<Topic[]>(['topics', sessionId], old =>
+        old?.map(t => t.id === topicId ? { ...t, voteCount: t.voteCount + 1 } : t)
+      );
+      if (prevVoteStatus) {
+        const existing = prevVoteStatus.allocations.find(a => a.topicId === topicId);
+        queryClient.setQueryData<VoteStatus>(['voteStatus', sessionId], {
+          ...prevVoteStatus,
+          remaining: prevVoteStatus.remaining - 1,
+          used: prevVoteStatus.used + 1,
+          allocations: existing
+            ? prevVoteStatus.allocations.map(a => a.topicId === topicId ? { ...a, count: a.count + 1 } : a)
+            : [...prevVoteStatus.allocations, { topicId, count: 1 }],
+        });
+      }
+      return { prevTopics, prevVoteStatus };
+    },
+    onError: (error, _topicId, context) => {
+      if (context?.prevTopics) queryClient.setQueryData(['topics', sessionId], context.prevTopics);
+      if (context?.prevVoteStatus) queryClient.setQueryData(['voteStatus', sessionId], context.prevVoteStatus);
+      addToast(error instanceof ApiError ? error.message : 'Failed to cast vote');
+    },
+    onSettled: invalidateAll,
   });
 
   const unvoteMutation = useMutation({
     mutationFn: (topicId: string) => withdrawVote(sessionId, topicId),
-    onSuccess: invalidateAll,
+    onMutate: async (topicId) => {
+      await queryClient.cancelQueries({ queryKey: ['topics', sessionId] });
+      await queryClient.cancelQueries({ queryKey: ['voteStatus', sessionId] });
+      const prevTopics = queryClient.getQueryData<Topic[]>(['topics', sessionId]);
+      const prevVoteStatus = queryClient.getQueryData<VoteStatus>(['voteStatus', sessionId]);
+      queryClient.setQueryData<Topic[]>(['topics', sessionId], old =>
+        old?.map(t => t.id === topicId ? { ...t, voteCount: Math.max(0, t.voteCount - 1) } : t)
+      );
+      if (prevVoteStatus) {
+        const existing = prevVoteStatus.allocations.find(a => a.topicId === topicId);
+        queryClient.setQueryData<VoteStatus>(['voteStatus', sessionId], {
+          ...prevVoteStatus,
+          remaining: prevVoteStatus.remaining + 1,
+          used: prevVoteStatus.used - 1,
+          allocations: existing && existing.count <= 1
+            ? prevVoteStatus.allocations.filter(a => a.topicId !== topicId)
+            : prevVoteStatus.allocations.map(a => a.topicId === topicId ? { ...a, count: a.count - 1 } : a),
+        });
+      }
+      return { prevTopics, prevVoteStatus };
+    },
+    onError: (error, _topicId, context) => {
+      if (context?.prevTopics) queryClient.setQueryData(['topics', sessionId], context.prevTopics);
+      if (context?.prevVoteStatus) queryClient.setQueryData(['voteStatus', sessionId], context.prevVoteStatus);
+      addToast(error instanceof ApiError ? error.message : 'Failed to withdraw vote');
+    },
+    onSettled: invalidateAll,
   });
 
   const handleSubmitTopic = (e: React.FormEvent) => {
@@ -269,9 +336,6 @@ function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryC
                     Cancel
                   </button>
                 </div>
-                {submitMutation.isError && (
-                  <p className="text-red-400 text-sm">Failed to submit topic. Please try again.</p>
-                )}
               </form>
             )}
           </div>
@@ -315,6 +379,8 @@ function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryC
           <a href="/" className="text-gray-500 hover:text-gray-300 text-sm">← Back to home</a>
         </div>
       </div>
+
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 }
@@ -388,6 +454,7 @@ function TopicCard({ topic, voteStatus, onDelete, isDeleting, onVote, onUnvote, 
               onClick={onUnvote}
               disabled={voting}
               className="w-7 h-7 flex items-center justify-center rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 text-sm"
+              aria-label="Remove a vote"
               title="Remove a vote"
             >
               −
@@ -401,6 +468,7 @@ function TopicCard({ topic, voteStatus, onDelete, isDeleting, onVote, onUnvote, 
               onClick={onVote}
               disabled={voting}
               className="w-7 h-7 flex items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm"
+              aria-label="Add a vote"
               title="Add a vote"
             >
               +
@@ -414,6 +482,7 @@ function TopicCard({ topic, voteStatus, onDelete, isDeleting, onVote, onUnvote, 
               onClick={onDelete}
               disabled={isDeleting}
               className="text-red-400 hover:text-red-300 text-xs disabled:opacity-50 ml-1"
+              aria-label="Delete topic"
               title="Delete topic"
             >
               ✕

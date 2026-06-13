@@ -140,7 +140,7 @@ app.http('listTopics', {
         }
 
         // Participants can see if they submitted it
-        if (entity.submittedBy === user.userDetails.toLowerCase()) {
+        if (entity.submittedBy === normalizeEmail(user.userDetails)) {
           topic.isOwn = true;
         }
 

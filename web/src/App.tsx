@@ -30,9 +30,13 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/dashboard/:sessionId" element={<SessionDashboardPage />} />
           <Route path="/dashboard/keepers" element={<GamekeepersPage />} />
-          {/* Mock auth routes for local development */}
-          <Route path="/.auth/login/aad" element={<MockAuthPage />} />
-          <Route path="/.auth/logout" element={<MockLogoutPage />} />
+          {/* Mock auth routes for local development only */}
+          {import.meta.env.DEV && (
+            <>
+              <Route path="/.auth/login/aad" element={<MockAuthPage />} />
+              <Route path="/.auth/logout" element={<MockLogoutPage />} />
+            </>
+          )}
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

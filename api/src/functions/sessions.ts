@@ -2,7 +2,7 @@ import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/fu
 import { sessionsTable } from '../shared/storage.js';
 import { requireGamekeeper, AuthError } from '../shared/auth.js';
 import { SessionEntity } from '../shared/types.js';
-import { validateSessionId, generateSessionCode, getSessionEntity, sanitizeText } from '../shared/helpers.js';
+import { validateSessionId, generateSessionCode, getSessionEntity, sanitizeText, resolveSession } from '../shared/helpers.js';
 
 // POST /api/sessions
 app.http('createSession', {
@@ -119,15 +119,9 @@ app.http('getSession', {
   route: 'sessions/{sessionId}',
   handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     try {
-      const sessionId = validateSessionId(request.params.sessionId);
-      if (!sessionId) {
-        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
-      }
-
-      const session = await getSessionEntity(sessionId);
-      if (!session) {
-        return { status: 404, jsonBody: { error: 'Session not found' } };
-      }
+      const result = await resolveSession(request);
+      if ('error' in result) return result.error;
+      const { session } = result;
 
       return {
         status: 200,
