@@ -13,6 +13,7 @@ export interface Topic {
   title: string;
   speakerName?: string;      // Only visible to gamekeepers
   submittedBy?: string;       // Only visible to gamekeepers
+  isOwn?: boolean;            // True if current user submitted this topic
   status: 'pending' | 'completed';
   voteCount: number;
   completedAt?: string;
@@ -50,4 +51,14 @@ export interface Gamekeeper {
   displayName: string;
   addedBy: string;
   addedAt: string;
+}
+
+export interface VoterStatus {
+  registered: boolean;
+  displayName?: string;
+  topicsSubmitted?: number;
+  totalVotesGranted?: number;
+  votesUsed?: number;
+  lastVoteGrantedAt?: string;
+  registeredAt?: string;
 }

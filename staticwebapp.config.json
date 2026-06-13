@@ -20,6 +20,10 @@
       "rewrite": "/.auth/logout"
     },
     {
+      "route": "/session/*",
+      "allowedRoles": ["authenticated"]
+    },
+    {
       "route": "/dashboard/*",
       "allowedRoles": ["authenticated"]
     },

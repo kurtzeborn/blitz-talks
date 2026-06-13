@@ -1,4 +1,4 @@
-import type { AuthStatus, Session, Gamekeeper } from '../types';
+import type { AuthStatus, Session, Gamekeeper, Topic, VoterStatus } from '../types';
 
 const API_BASE = '/api';
 
@@ -87,4 +87,41 @@ export async function inviteGamekeeper(email: string): Promise<Gamekeeper> {
 
 export async function removeGamekeeper(email: string): Promise<void> {
   return apiFetch<void>(`/gamekeepers/${encodeURIComponent(email)}`, { method: 'DELETE' });
+}
+
+// ============ Voters ============
+
+export async function fetchVoterStatus(sessionId: string): Promise<VoterStatus> {
+  return apiFetch<VoterStatus>(`/sessions/${sessionId}/voter`);
+}
+
+export async function registerVoter(sessionId: string, displayName: string): Promise<VoterStatus> {
+  return apiFetch<VoterStatus>(`/sessions/${sessionId}/register`, {
+    method: 'POST',
+    body: JSON.stringify({ displayName }),
+  });
+}
+
+// ============ Topics ============
+
+export async function fetchTopics(sessionId: string): Promise<Topic[]> {
+  return apiFetch<Topic[]>(`/sessions/${sessionId}/topics`);
+}
+
+export async function submitTopic(sessionId: string, title: string): Promise<Topic & { votesGranted: number }> {
+  return apiFetch<Topic & { votesGranted: number }>(`/sessions/${sessionId}/topics`, {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function deleteTopic(sessionId: string, topicId: string): Promise<void> {
+  return apiFetch<void>(`/sessions/${sessionId}/topics/${topicId}`, { method: 'DELETE' });
+}
+
+export async function updateTopicStatus(sessionId: string, topicId: string, status: string): Promise<Topic> {
+  return apiFetch<Topic>(`/sessions/${sessionId}/topics/${topicId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
 }

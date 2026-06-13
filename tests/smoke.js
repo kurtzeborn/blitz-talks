@@ -36,11 +36,13 @@ await test('/api/me responds', async () => {
   const data = await res.json();
   assert('isAuthenticated' in data, 'Missing isAuthenticated field');
   assert('isGamekeeper' in data, 'Missing isGamekeeper field');
+  assert(data.isAuthenticated === false, 'Should be unauthenticated');
 });
 
-await test('Invalid session code returns 404', async () => {
-  const res = await fetch(`${BASE_URL}/api/sessions/ZZZZ`);
-  assert(res.status === 404, `Expected 404, got ${res.status}`);
+await test('Protected API requires auth', async () => {
+  const res = await fetch(`${BASE_URL}/api/sessions`);
+  // SWA returns 401 or 302 redirect for unauthenticated requests to protected routes
+  assert(res.status === 401 || res.status === 302 || res.redirected, `Expected auth challenge, got ${res.status}`);
 });
 
 await test('Static assets load', async () => {
