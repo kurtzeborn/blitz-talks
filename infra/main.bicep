@@ -65,11 +65,17 @@ module staticSite 'br/public:avm/res/web/static-site:0.7.0' = {
   }
 }
 
+// Reference the storage account deployed by the module
+resource storageAccountRef 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: storageAccountName
+  dependsOn: [storageAccount]
+}
+
 // Wire storage connection string to SWA app settings
 resource swaAppSettings 'Microsoft.Web/staticSites/config@2024-04-01' = {
   name: '${staticSiteName}/appsettings'
   properties: {
-    AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(resourceId('Microsoft.Storage/storageAccounts', storageAccountName), '2023-05-01').keys[0].value};EndpointSuffix=core.windows.net'
+    AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountRef.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
   }
   dependsOn: [
     staticSite
