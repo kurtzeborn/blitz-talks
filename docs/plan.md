@@ -220,7 +220,6 @@ interface Voter {
   topicsSubmitted: number;     // Must be ≥1 to vote
   totalVotesGranted: number;   // Starts at 3, +1 per qualifying visit
   votesUsed: number;           // Sum of all vote counts (denormalized)
-  distinctTopicsVoted: number; // Lifetime count of unique topics voted on (never decrements)
   lastVoteGrantedAt: string;   // ISO 8601 — when last vote was granted
   registeredAt: string;        // ISO 8601
 }
@@ -259,21 +258,24 @@ interface Gamekeeper {
 
 ### Vote Stacking Rules
 
-The 3-distinct-topics requirement is a **lifetime milestone** — once a participant has voted on 3 different topics, stacking is permanently unlocked for that session, even if they later withdraw votes.
+On every vote, the server checks the voter's **current active votes** to enforce the 3-distinct-topics rule:
 
-| Distinct Topics Voted (lifetime) | Can Stack on Same Topic? |
-|----------------------------------|-------------------------|
-| 0-2 | No — must vote for a topic not yet voted on |
-| 3+ | Yes — can add more votes to any topic |
+1. **Voting for a new topic** (no existing vote on it): Always allowed (if votes remain)
+2. **Adding another vote to an already-voted topic**: Only allowed if the voter currently has active votes on **at least 3 distinct topics** (including this one)
 
-The `distinctTopicsVoted` counter on the voter record **never decrements** — it tracks the number of unique topics the voter has ever voted on, not current active votes.
+This is **not** a permanent unlock — if a voter withdraws votes and drops below 3 distinct active topics, they cannot stack again until they restore 3 distinct topics.
+
+**Examples:**
+- Voter has votes on topics A, B → tries to add 2nd vote to A → rejected (only 2 distinct)
+- Voter has votes on topics A, B, C → tries to add 2nd vote to A → allowed (3 distinct)
+- Voter has votes on topics A(×2), B, C → withdraws from B (now A×2, C) → tries to add 3rd vote to A → rejected (only 2 distinct)
+- Voter has votes on topics A(×2), B, C → withdraws from A, leaving A(×1), B, C → can still stack (still 3 distinct)
 
 ### Vote Withdrawal
 - Participants can remove votes from any **pending** topic and reallocate them
 - Votes on **completed** talks are locked — cannot be withdrawn
 - Withdrawal decrements `votesUsed` and frees the vote for reuse
-- Withdrawal does **not** decrement `distinctTopicsVoted` — the milestone is permanent
-- After withdrawal, the freed vote follows current stacking rules based on `distinctTopicsVoted`
+- If withdrawing the last vote on a topic reduces distinct active topics below 3, stacking is blocked until 3 distinct topics are restored
 
 ### Server-Side Enforcement
 All vote logic is server-side. The client displays remaining votes and next-refresh countdown but cannot manipulate the budget.
@@ -281,9 +283,10 @@ All vote logic is server-side. The client displays remaining votes and next-refr
 ```
 remainingVotes = totalVotesGranted - votesUsed
 nextVoteAt = lastVoteGrantedAt + voteIntervalMinutes
-canVoteForTopic(topicId) = 
-  if distinctTopicsVoted < 3: no existing vote on this topic
-  else: true (stacking allowed)
+currentDistinctTopics = count of topics where this voter has ≥1 active vote
+canVoteForTopic(topicId) =
+  if no existing vote on topicId: true (new topic always OK)
+  if existing vote on topicId: currentDistinctTopics >= 3
 ```
 
 ---
@@ -686,8 +689,9 @@ blitz-talks/
 | User tries to vote before submitting a topic | API rejects; UI shows "Submit a topic first to unlock voting" |
 | Gamekeeper marks talk complete | Topic disappears from participant view; votes on it are locked |
 | User withdraws vote from completed talk | Not allowed — API rejects |
-| User voted on 2 distinct topics, withdraws 1, re-votes | Must vote for a 3rd distinct topic (milestone not yet reached) |
-| User voted on 3+ distinct topics, withdraws any, re-votes | Can re-vote on any topic including ones already voted on (milestone permanent) |
+| User has votes on 2 distinct topics, tries to stack | Rejected — need 3 distinct active topics to stack |
+| User has votes on 3 distinct topics, tries to stack | Allowed — 3 distinct topics requirement met |
+| User has votes on 3 topics, withdraws from one, tries to stack | Rejected — now only 2 distinct active topics; must vote on a 3rd topic first |
 | Session code collision | Generate new code and retry (4-char = 1.6M combinations) |
 | User signs in with different MS account | Treated as a separate participant — must submit topic to vote |
 | All topics completed | Dashboard shows "All talks complete!" — no pending topics remain |
