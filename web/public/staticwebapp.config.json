@@ -24,6 +24,10 @@
       "allowedRoles": ["authenticated"]
     },
     {
+      "route": "/dashboard",
+      "allowedRoles": ["authenticated"]
+    },
+    {
       "route": "/dashboard/*",
       "allowedRoles": ["authenticated"]
     },
