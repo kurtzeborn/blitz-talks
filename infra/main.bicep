@@ -16,6 +16,13 @@ param swaLocation string = 'westus2'
 @description('Custom domain for the Static Web App (e.g., blitz.k61.dev)')
 param customDomain string = ''
 
+@description('Azure AD Client ID for SWA authentication')
+param aadClientId string = ''
+
+@secure()
+@description('Azure AD Client Secret for SWA authentication')
+param aadClientSecret string = ''
+
 param tags object = {
   project: 'blitz-talks'
   environment: environment
@@ -71,12 +78,16 @@ resource storageAccountRef 'Microsoft.Storage/storageAccounts@2023-05-01' existi
   dependsOn: [storageAccount]
 }
 
-// Wire storage connection string to SWA app settings
+// Wire storage connection string and auth settings to SWA app settings
 resource swaAppSettings 'Microsoft.Web/staticSites/config@2024-04-01' = {
   name: '${staticSiteName}/appsettings'
-  properties: {
-    AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountRef.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
-  }
+  properties: union(
+    {
+      AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountRef.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+    },
+    aadClientId != '' ? { AAD_CLIENT_ID: aadClientId } : {},
+    aadClientSecret != '' ? { AAD_CLIENT_SECRET: aadClientSecret } : {}
+  )
   dependsOn: [
     staticSite
     storageAccount

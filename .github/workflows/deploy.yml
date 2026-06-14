@@ -69,7 +69,7 @@ jobs:
         with:
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: ./infra/main.bicep
-          parameters: environment=prod customDomain=blitz.k61.dev
+          parameters: environment=prod customDomain=blitz.k61.dev aadClientId=${{ secrets.AAD_CLIENT_ID }} aadClientSecret=${{ secrets.AAD_CLIENT_SECRET }}
           failOnStdErr: false
 
   deploy-swa:
