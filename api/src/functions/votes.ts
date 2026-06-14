@@ -181,7 +181,7 @@ app.http('castVote', {
 
       // Get current vote allocations for stacking check
       const existingVotes = await getVoterVotes(sessionId, email);
-      const voteRowKey = `${email}#${topicId}`;
+      const voteRowKey = `${email}_${topicId}`;
       const existingVote = existingVotes.find(v => v.topicId === topicId);
       const distinctTopics = new Set(existingVotes.filter(v => v.count > 0).map(v => v.topicId));
 
@@ -284,7 +284,7 @@ app.http('withdrawVote', {
       }
 
       // Get the vote record
-      const voteRowKey = `${email}#${topicId}`;
+      const voteRowKey = `${email}_${topicId}`;
       let vote: VoteEntity;
       try {
         vote = await votesTable.getEntity<VoteEntity>(sessionId, voteRowKey);
