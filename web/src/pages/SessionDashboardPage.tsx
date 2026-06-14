@@ -67,7 +67,7 @@ export function SessionDashboardPage() {
     );
   }
 
-  const sessionUrl = `${window.location.origin}/?session=${sessionId}`;
+  const sessionUrl = `${window.location.origin}/session/${sessionId}`;
   const pendingTopics = (topics || []).filter((t: Topic) => t.status === 'pending');
   const completedTopics = (topics || []).filter((t: Topic) => t.status === 'completed');
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '';
