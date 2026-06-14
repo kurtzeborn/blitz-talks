@@ -374,10 +374,6 @@ function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryC
           <p className="text-gray-500 text-center py-8">No topics submitted yet. Be the first!</p>
         )}
 
-        {/* Footer nav */}
-        <div className="mt-8 text-center">
-          <a href="/" className="text-gray-500 hover:text-gray-300 text-sm">← Back to home</a>
-        </div>
       </div>
 
       <ToastContainer toasts={toasts} onDismiss={removeToast} />

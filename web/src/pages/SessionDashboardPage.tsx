@@ -72,6 +72,14 @@ export function SessionDashboardPage() {
   const completedTopics = (topics || []).filter((t: Topic) => t.status === 'completed');
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '';
 
+  // Build stable anonymous speaker labels from all topics
+  const allTopics = [...pendingTopics, ...completedTopics];
+  const uniqueSpeakers = [...new Set(allTopics.map(t => t.speakerName))];
+  const speakerLabel = (name: string | undefined) => {
+    if (!name) return showNames ? 'Unknown' : 'Speaker ?';
+    return showNames ? name : `Speaker ${uniqueSpeakers.indexOf(name) + 1}`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-5xl mx-auto">
@@ -141,7 +149,7 @@ export function SessionDashboardPage() {
                 <tr className="border-b border-gray-700">
                   <th className="text-left p-4 text-gray-400 font-medium w-12">#</th>
                   <th className="text-left p-4 text-gray-400 font-medium">Topic</th>
-                  {showNames && <th className="text-left p-4 text-gray-400 font-medium w-48 hidden md:table-cell">Speaker</th>}
+                  <th className="text-left p-4 text-gray-400 font-medium w-48 hidden md:table-cell">Speaker</th>
                   <th className="text-center p-4 text-gray-400 font-medium w-24">Votes</th>
                   <th className="text-center p-4 text-gray-400 font-medium w-28"></th>
                 </tr>
@@ -151,7 +159,7 @@ export function SessionDashboardPage() {
                   <tr key={topic.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                     <td className="p-4 text-gray-500 text-lg">{i + 1}</td>
                     <td className="p-4 font-medium text-xl">{topic.title}</td>
-                    {showNames && <td className="p-4 text-gray-300 text-lg hidden md:table-cell">{topic.speakerName}</td>}
+                    <td className="p-4 text-gray-300 text-lg hidden md:table-cell">{speakerLabel(topic.speakerName)}</td>
                     <td className="p-4 text-center text-2xl font-bold">{topic.voteCount}</td>
                     <td className="p-4 text-center">
                       <button
@@ -192,7 +200,7 @@ export function SessionDashboardPage() {
                     {completedTopics.map((topic: Topic) => (
                       <tr key={topic.id} className="border-b border-gray-700/50">
                         <td className="p-4 text-gray-400 text-lg">{topic.title}</td>
-                        {showNames && <td className="p-4 text-gray-500 w-48 hidden md:table-cell">{topic.speakerName}</td>}
+                        <td className="p-4 text-gray-500 w-48 hidden md:table-cell">{speakerLabel(topic.speakerName)}</td>
                         <td className="p-4 text-center text-gray-500 text-lg w-24">{topic.voteCount}</td>
                         <td className="p-4 text-center w-28">
                           <button
