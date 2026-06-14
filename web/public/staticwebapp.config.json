@@ -36,6 +36,10 @@
       "allowedRoles": ["authenticated"]
     },
     {
+      "route": "/api/gamekeepers/seed",
+      "allowedRoles": ["anonymous"]
+    },
+    {
       "route": "/api/gamekeepers*",
       "allowedRoles": ["authenticated"]
     },
