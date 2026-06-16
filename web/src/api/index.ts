@@ -77,6 +77,10 @@ export async function updateSession(sessionId: string, updates: { status?: strin
   });
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+  await apiFetch<void>(`/sessions/${sessionId}`, { method: 'DELETE' });
+}
+
 // ============ Gamekeepers ============
 
 export async function fetchGamekeepers(): Promise<Gamekeeper[]> {

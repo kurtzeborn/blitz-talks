@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchAuthStatus, fetchSessions, createSession } from '../api';
+import { fetchAuthStatus, fetchSessions, createSession, deleteSession } from '../api';
 import type { Session } from '../types';
 
 export function DashboardPage() {
   const queryClient = useQueryClient();
   const [newSessionName, setNewSessionName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const { data: auth, isLoading: authLoading } = useQuery({
     queryKey: ['auth'],
@@ -23,6 +24,14 @@ export function DashboardPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       setNewSessionName('');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (sessionId: string) => deleteSession(sessionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      setDeleteConfirm(null);
     },
   });
 
@@ -116,25 +125,56 @@ export function DashboardPage() {
               <p className="text-gray-500">No sessions yet. Create one above.</p>
             )}
             {sessions?.map((session: Session) => (
-              <a
+              <div
                 key={session.id}
-                href={`/dashboard/${session.id}`}
-                className="block p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors border border-gray-700"
+                className="flex items-center gap-2"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{session.name}</h3>
-                    <p className="text-gray-400 text-sm">Code: {session.id}</p>
+                <a
+                  href={`/dashboard/${session.id}`}
+                  className="flex-1 block p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors border border-gray-700"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-lg">{session.name}</h3>
+                      <p className="text-gray-400 text-sm">Code: {session.id}</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      session.status === 'active'
+                        ? 'bg-green-900 text-green-300'
+                        : 'bg-gray-700 text-gray-400'
+                    }`}>
+                      {session.status}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    session.status === 'active'
-                      ? 'bg-green-900 text-green-300'
-                      : 'bg-gray-700 text-gray-400'
-                  }`}>
-                    {session.status}
-                  </span>
-                </div>
-              </a>
+                </a>
+                {deleteConfirm === session.id ? (
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => deleteMutation.mutate(session.id)}
+                      disabled={deleteMutation.isPending}
+                      className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleteMutation.isPending ? '...' : 'Confirm'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirm(session.id)}
+                    className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                    title="Delete session"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}

@@ -1,5 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
-import { sessionsTable } from '../shared/storage.js';
+import { sessionsTable, topicsTable, votesTable, votersTable } from '../shared/storage.js';
 import { requireGamekeeper, AuthError } from '../shared/auth.js';
 import { SessionEntity } from '../shared/types.js';
 import { validateSessionId, generateSessionCode, getSessionEntity, sanitizeText, resolveSession } from '../shared/helpers.js';
@@ -210,6 +210,50 @@ app.http('updateSession', {
       }
       context.error('Failed to update session:', error);
       return { status: 500, jsonBody: { error: 'Failed to update session' } };
+    }
+  },
+});
+
+// DELETE /api/sessions/:id
+app.http('deleteSession', {
+  methods: ['DELETE'],
+  authLevel: 'anonymous',
+  route: 'sessions/{sessionId}',
+  handler: async (request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+      await requireGamekeeper(request);
+
+      const sessionId = validateSessionId(request.params.sessionId);
+      if (!sessionId) {
+        return { status: 400, jsonBody: { error: 'Invalid session ID' } };
+      }
+
+      const session = await getSessionEntity(sessionId);
+      if (!session) {
+        return { status: 404, jsonBody: { error: 'Session not found' } };
+      }
+
+      // Cascade delete: topics, votes, voters for this session
+      const tables = [topicsTable, votesTable, votersTable];
+      for (const table of tables) {
+        const entities = table.listEntities<{ partitionKey: string; rowKey: string }>({
+          queryOptions: { filter: `PartitionKey eq '${sessionId}'` },
+        });
+        for await (const entity of entities) {
+          await table.deleteEntity(entity.partitionKey, entity.rowKey);
+        }
+      }
+
+      // Delete the session itself
+      await sessionsTable.deleteEntity('session', sessionId);
+
+      return { status: 204 };
+    } catch (error) {
+      if (error instanceof AuthError) {
+        return { status: error.statusCode, jsonBody: { error: error.message } };
+      }
+      context.error('Failed to delete session:', error);
+      return { status: 500, jsonBody: { error: 'Failed to delete session' } };
     }
   },
 });
