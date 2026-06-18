@@ -88,10 +88,10 @@ export function SessionDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gray-900 text-white p-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-4xl font-bold">⚡ {session.name}</h1>
             <p className="text-gray-400 mt-1">
@@ -121,7 +121,7 @@ export function SessionDashboardPage() {
         </div>
 
         {/* QR Code + Session Code */}
-        <div className="flex items-center gap-8 mb-8 p-6 bg-gray-800 rounded-xl">
+        <div className="flex items-center gap-6 mb-4 p-4 bg-gray-800 rounded-xl">
           <div className="bg-white p-3 rounded-lg">
             <QRCodeSVG value={sessionUrl} size={180} aria-label={`QR code to join session ${sessionId}`} />
           </div>
@@ -133,8 +133,8 @@ export function SessionDashboardPage() {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold">📋 Pending Topics ({pendingTopics.length})</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">📋 Pending Topics ({pendingTopics.length})</h2>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">Updated {lastUpdated}</span>
             <button
@@ -162,29 +162,29 @@ export function SessionDashboardPage() {
 
         {/* Pending topics table */}
         {pendingTopics.length > 0 ? (
-          <div className="bg-gray-800 rounded-lg overflow-hidden mb-8">
+          <div className="bg-gray-800 rounded-lg overflow-hidden mb-4">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-700">
-                  <th className="text-left p-4 text-gray-400 font-medium w-12">#</th>
-                  <th className="text-left p-4 text-gray-400 font-medium">Topic</th>
-                  <th className="text-left p-4 text-gray-400 font-medium w-48 hidden md:table-cell">Speaker</th>
-                  <th className="text-center p-4 text-gray-400 font-medium w-24">Votes</th>
-                  <th className="text-center p-4 text-gray-400 font-medium w-28"></th>
+                  <th className="text-left px-2 py-1 text-gray-400 font-medium text-xs w-8">#</th>
+                  <th className="text-left px-2 py-1 text-gray-400 font-medium text-xs">Topic</th>
+                  <th className="text-left px-2 py-1 text-gray-400 font-medium text-xs w-36 hidden md:table-cell">Speaker</th>
+                  <th className="text-center px-2 py-1 text-gray-400 font-medium text-xs w-16">Votes</th>
+                  <th className="text-center px-2 py-1 text-gray-400 font-medium text-xs w-20"></th>
                 </tr>
               </thead>
               <tbody>
                 {pendingTopics.map((topic: Topic, i: number) => (
                   <tr key={topic.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                    <td className="p-4 text-gray-500 text-lg">{i + 1}</td>
-                    <td className="p-4 font-medium text-xl">{topic.title}</td>
-                    <td className="p-4 text-gray-300 text-lg hidden md:table-cell">{speakerLabel(topic.speakerName)}</td>
-                    <td className="p-4 text-center text-2xl font-bold">{topic.voteCount}</td>
-                    <td className="p-4 text-center">
+                    <td className="px-2 py-1 text-gray-500 text-sm">{i + 1}</td>
+                    <td className="px-2 py-1 font-medium text-sm">{topic.title}</td>
+                    <td className="px-2 py-1 text-gray-300 text-sm hidden md:table-cell">{speakerLabel(topic.speakerName)}</td>
+                    <td className="px-2 py-1 text-center text-lg font-bold">{topic.voteCount}</td>
+                    <td className="px-2 py-1 text-center">
                       <button
                         onClick={() => setConfirmTarget({ topicId: topic.id, title: topic.title, action: 'complete' })}
                         disabled={markCompleteMutation.isPending}
-                        className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-sm font-medium transition-colors"
+                        className="px-2 py-1 bg-green-700 hover:bg-green-600 rounded text-xs font-medium transition-colors"
                       >
                         ✓ Done
                       </button>
@@ -195,8 +195,8 @@ export function SessionDashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="p-8 bg-gray-800 rounded-lg text-center mb-8">
-            <p className="text-gray-400 text-xl">
+          <div className="p-4 bg-gray-800 rounded-lg text-center mb-4">
+            <p className="text-gray-400 text-sm">
               {completedTopics.length > 0 ? '🎉 All talks complete!' : 'No topics submitted yet.'}
             </p>
           </div>
@@ -204,12 +204,12 @@ export function SessionDashboardPage() {
 
         {/* Completed topics — collapsible */}
         {completedTopics.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-4">
             <button
               onClick={() => setShowCompleted(!showCompleted)}
-              className="flex items-center gap-2 text-xl font-semibold text-gray-400 hover:text-gray-300 transition-colors mb-4"
+              className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-gray-300 transition-colors mb-2"
             >
-              <span className="text-sm">{showCompleted ? '▼' : '▶'}</span>
+              <span className="text-xs">{showCompleted ? '▼' : '▶'}</span>
               ✅ Completed ({completedTopics.length})
             </button>
             {showCompleted && (
@@ -218,14 +218,14 @@ export function SessionDashboardPage() {
                   <tbody>
                     {completedTopics.map((topic: Topic) => (
                       <tr key={topic.id} className="border-b border-gray-700/50">
-                        <td className="p-4 text-gray-400 text-lg">{topic.title}</td>
-                        <td className="p-4 text-gray-500 w-48 hidden md:table-cell">{speakerLabel(topic.speakerName)}</td>
-                        <td className="p-4 text-center text-gray-500 text-lg w-24">{topic.voteCount}</td>
-                        <td className="p-4 text-center w-28">
+                        <td className="px-2 py-1 text-gray-400 text-sm">{topic.title}</td>
+                        <td className="px-2 py-1 text-gray-500 text-sm w-36 hidden md:table-cell">{speakerLabel(topic.speakerName)}</td>
+                        <td className="px-2 py-1 text-center text-gray-500 text-sm w-16">{topic.voteCount}</td>
+                        <td className="px-2 py-1 text-center w-20">
                           <button
                             onClick={() => setConfirmTarget({ topicId: topic.id, title: topic.title, action: 'revert' })}
                             disabled={markCompleteMutation.isPending}
-                            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
+                            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors"
                           >
                             Revert
                           </button>
