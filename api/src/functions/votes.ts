@@ -97,7 +97,7 @@ app.http('getMyVotes', {
       return {
         status: 200,
         jsonBody: {
-          canVote: voter.topicsSubmitted > 0,
+          canVote: session.requireTopicToVote === false || voter.topicsSubmitted > 0,
           remaining,
           totalGranted: voter.totalVotesGranted,
           used: voter.votesUsed,
@@ -128,7 +128,7 @@ app.http('castVote', {
 
       const result = await resolveSession(request, { requireActive: true });
       if ('error' in result) return result.error;
-      const { sessionId } = result;
+      const { sessionId, session } = result;
 
       let body: { topicId?: string } = {};
       try {
@@ -154,7 +154,7 @@ app.http('castVote', {
         throw error;
       }
 
-      if (voter.topicsSubmitted === 0) {
+      if (session.requireTopicToVote !== false && voter.topicsSubmitted === 0) {
         return { status: 400, jsonBody: { error: 'Submit at least 1 topic before voting' } };
       }
 

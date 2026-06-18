@@ -1,7 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { sessionsTable, topicsTable, votesTable, votersTable } from '../shared/storage.js';
 import { requireGamekeeper, AuthError } from '../shared/auth.js';
-import { SessionEntity } from '../shared/types.js';
+import { SessionEntity, VoterEntity } from '../shared/types.js';
 import { validateSessionId, generateSessionCode, getSessionEntity, sanitizeText, resolveSession } from '../shared/helpers.js';
 
 // POST /api/sessions
@@ -13,7 +13,7 @@ app.http('createSession', {
     try {
       const user = await requireGamekeeper(request);
 
-      let body: { name?: string; voteIntervalMinutes?: number } = {};
+      let body: { name?: string; voteIntervalMinutes?: number; requireTopicToVote?: boolean } = {};
       try {
         body = await request.json() as typeof body;
       } catch {
@@ -34,6 +34,8 @@ app.http('createSession', {
         return { status: 400, jsonBody: { error: 'Vote interval must be between 30 and 1440 minutes' } };
       }
 
+      const requireTopicToVote = body.requireTopicToVote !== false;
+
       const sessionId = await generateSessionCode();
 
       const entity: SessionEntity = {
@@ -42,6 +44,7 @@ app.http('createSession', {
         name: sanitizeText(name),
         status: 'active',
         voteIntervalMinutes,
+        requireTopicToVote,
         createdBy: user.userDetails,
         createdAt: new Date(),
       };
@@ -55,6 +58,7 @@ app.http('createSession', {
           name: entity.name,
           status: entity.status,
           voteIntervalMinutes: entity.voteIntervalMinutes,
+          requireTopicToVote: entity.requireTopicToVote,
           createdBy: entity.createdBy,
           createdAt: entity.createdAt,
         },
@@ -130,6 +134,7 @@ app.http('getSession', {
           name: session.name,
           status: session.status,
           voteIntervalMinutes: session.voteIntervalMinutes,
+          requireTopicToVote: session.requireTopicToVote !== false,
           createdAt: session.createdAt,
         },
       };
@@ -159,7 +164,7 @@ app.http('updateSession', {
         return { status: 404, jsonBody: { error: 'Session not found' } };
       }
 
-      let body: { status?: string; voteIntervalMinutes?: number; name?: string } = {};
+      let body: { status?: string; voteIntervalMinutes?: number; name?: string; requireTopicToVote?: boolean } = {};
       try {
         body = await request.json() as typeof body;
       } catch {
@@ -193,7 +198,29 @@ app.http('updateSession', {
         updates.name = sanitizeText(name);
       }
 
+      if (body.requireTopicToVote !== undefined) {
+        updates.requireTopicToVote = body.requireTopicToVote;
+      }
+
       await sessionsTable.updateEntity(updates, 'Merge');
+
+      // If requireTopicToVote was turned off, grant initial votes to all voters with 0 votes
+      const INITIAL_VOTES = 3;
+      if (body.requireTopicToVote === false && session.requireTopicToVote !== false) {
+        const voters = votersTable.listEntities<VoterEntity>({
+          queryOptions: { filter: `PartitionKey eq '${sessionId}'` },
+        });
+        for await (const voter of voters) {
+          if (voter.totalVotesGranted === 0) {
+            await votersTable.updateEntity({
+              partitionKey: sessionId,
+              rowKey: voter.rowKey,
+              totalVotesGranted: INITIAL_VOTES,
+              lastVoteGrantedAt: new Date(),
+            }, 'Merge');
+          }
+        }
+      }
 
       return {
         status: 200,
@@ -202,6 +229,7 @@ app.http('updateSession', {
           name: (updates.name as string) ?? session.name,
           status: (updates.status as string) ?? session.status,
           voteIntervalMinutes: (updates.voteIntervalMinutes as number) ?? session.voteIntervalMinutes,
+          requireTopicToVote: (updates.requireTopicToVote as boolean) ?? (session.requireTopicToVote !== false),
         },
       };
     } catch (error) {

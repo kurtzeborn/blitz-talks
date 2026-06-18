@@ -6,6 +6,7 @@ import type { Session } from '../types';
 export function DashboardPage() {
   const queryClient = useQueryClient();
   const [newSessionName, setNewSessionName] = useState('');
+  const [newSessionRequireTopic, setNewSessionRequireTopic] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const { data: auth, isLoading: authLoading } = useQuery({
@@ -20,10 +21,11 @@ export function DashboardPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (name: string) => createSession(name),
+    mutationFn: (name: string) => createSession(name, undefined, newSessionRequireTopic),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       setNewSessionName('');
+      setNewSessionRequireTopic(true);
     },
   });
 
@@ -95,22 +97,33 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <form onSubmit={handleCreateSession} className="mb-8 flex gap-2">
-          <input
-            type="text"
-            value={newSessionName}
-            onChange={(e) => setNewSessionName(e.target.value)}
-            placeholder="New session name (e.g., Team Offsite 2026)"
-            maxLength={50}
-            className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={!newSessionName.trim() || createMutation.isPending}
-            className="px-6 py-2 bg-blue-600 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {createMutation.isPending ? 'Creating...' : 'Create Session'}
-          </button>
+        <form onSubmit={handleCreateSession} className="mb-8 space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newSessionName}
+              onChange={(e) => setNewSessionName(e.target.value)}
+              placeholder="New session name (e.g., Team Offsite 2026)"
+              maxLength={50}
+              className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={!newSessionName.trim() || createMutation.isPending}
+              className="px-6 py-2 bg-blue-600 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {createMutation.isPending ? 'Creating...' : 'Create Session'}
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!newSessionRequireTopic}
+              onChange={(e) => setNewSessionRequireTopic(!e.target.checked)}
+              className="rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+            />
+            Allow voting without submitting a topic
+          </label>
         </form>
 
         {createMutation.isError && (

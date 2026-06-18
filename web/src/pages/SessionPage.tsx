@@ -38,7 +38,7 @@ export function SessionPage() {
   const { data: voteStatus } = useQuery({
     queryKey: ['voteStatus', sessionId],
     queryFn: () => fetchVoteStatus(sessionId!),
-    enabled: !!session && voter?.registered === true && (voter?.topicsSubmitted ?? 0) > 0,
+    enabled: !!session && voter?.registered === true && ((voter?.topicsSubmitted ?? 0) > 0 || session?.requireTopicToVote === false),
     refetchInterval: 30_000,
   });
 
@@ -85,6 +85,7 @@ export function SessionPage() {
     <SessionView
       sessionId={sessionId!}
       sessionName={session.name}
+      requireTopicToVote={session.requireTopicToVote !== false}
       voter={voter}
       topics={topics || []}
       voteStatus={voteStatus}
@@ -167,13 +168,14 @@ function RegistrationForm({ sessionId, suggestedName }: { sessionId: string; sug
 interface SessionViewProps {
   sessionId: string;
   sessionName: string;
+  requireTopicToVote: boolean;
   voter: { topicsSubmitted?: number; totalVotesGranted?: number; votesUsed?: number; displayName?: string };
   topics: Topic[];
   voteStatus?: VoteStatus;
   queryClient: ReturnType<typeof useQueryClient>;
 }
 
-function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryClient }: SessionViewProps) {
+function SessionView({ sessionId, sessionName, requireTopicToVote, voter, topics, voteStatus, queryClient }: SessionViewProps) {
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [newTopicTitle, setNewTopicTitle] = useState('');
   const { toasts, addToast, removeToast } = useToast();
@@ -281,6 +283,7 @@ function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryC
   const topicsSubmitted = voter.topicsSubmitted ?? 0;
   const canSubmitMore = topicsSubmitted < 3;
   const hasSubmittedTopic = topicsSubmitted > 0;
+  const canVoteWithoutTopic = !requireTopicToVote;
   const remaining = (voter.totalVotesGranted ?? 0) - (voter.votesUsed ?? 0);
   const pendingTopics = topics.filter(t => t.status === 'pending');
 
@@ -342,14 +345,14 @@ function SessionView({ sessionId, sessionName, voter, topics, voteStatus, queryC
         )}
 
         {/* Prompt to submit first topic */}
-        {!hasSubmittedTopic && (
+        {!hasSubmittedTopic && requireTopicToVote && (
           <div className="mb-6 p-4 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">
             <p className="text-yellow-200 text-sm">Submit at least 1 topic to unlock voting ({remaining > 0 ? `${remaining} votes ready` : '3 votes will be granted'}).</p>
           </div>
         )}
 
         {/* Vote status bar */}
-        {hasSubmittedTopic && voteStatus && (
+        {(hasSubmittedTopic || canVoteWithoutTopic) && voteStatus && (
           <VoteStatusBar voteStatus={voteStatus} />
         )}
 

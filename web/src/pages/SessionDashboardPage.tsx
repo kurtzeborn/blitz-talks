@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { fetchAuthStatus, fetchSession, fetchTopics, updateTopicStatus, updateSession } from '../api';
-import type { Topic } from '../types';
+import type { Topic, Session } from '../types';
 
 export function SessionDashboardPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -41,6 +41,13 @@ export function SessionDashboardPage() {
 
   const archiveMutation = useMutation({
     mutationFn: () => updateSession(sessionId!, { status: 'archived' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
+    },
+  });
+
+  const toggleTopicRequirementMutation = useMutation({
+    mutationFn: (requireTopicToVote: boolean) => updateSession(sessionId!, { requireTopicToVote }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
     },
@@ -130,6 +137,18 @@ export function SessionDashboardPage() {
           <h2 className="text-2xl font-semibold">📋 Pending Topics ({pendingTopics.length})</h2>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">Updated {lastUpdated}</span>
+            <button
+              onClick={() => toggleTopicRequirementMutation.mutate(!(session as Session).requireTopicToVote)}
+              disabled={toggleTopicRequirementMutation.isPending}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                (session as Session).requireTopicToVote === false ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+              title={(session as Session).requireTopicToVote === false
+                ? 'Topic NOT required to vote (click to require)'
+                : 'Topic required to vote (click to allow voting without topic)'}
+            >
+              {(session as Session).requireTopicToVote === false ? '🗳️ Open Voting' : '🔒 Topic Required'}
+            </button>
             <button
               onClick={() => setShowNames(!showNames)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${

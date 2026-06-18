@@ -55,10 +55,10 @@ export async function fetchAuthStatus(): Promise<AuthStatus> {
 
 // ============ Sessions ============
 
-export async function createSession(name: string, voteIntervalMinutes?: number): Promise<Session> {
+export async function createSession(name: string, voteIntervalMinutes?: number, requireTopicToVote?: boolean): Promise<Session> {
   return apiFetch<Session>('/sessions', {
     method: 'POST',
-    body: JSON.stringify({ name, voteIntervalMinutes }),
+    body: JSON.stringify({ name, voteIntervalMinutes, requireTopicToVote }),
   });
 }
 
@@ -70,7 +70,7 @@ export async function fetchSession(sessionId: string): Promise<Session> {
   return apiFetch<Session>(`/sessions/${sessionId}`);
 }
 
-export async function updateSession(sessionId: string, updates: { status?: string; name?: string; voteIntervalMinutes?: number }): Promise<Session> {
+export async function updateSession(sessionId: string, updates: { status?: string; name?: string; voteIntervalMinutes?: number; requireTopicToVote?: boolean }): Promise<Session> {
   return apiFetch<Session>(`/sessions/${sessionId}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),

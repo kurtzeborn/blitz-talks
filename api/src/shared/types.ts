@@ -4,6 +4,7 @@ export interface SessionEntity {
   name: string;
   status: 'active' | 'archived';
   voteIntervalMinutes: number;
+  requireTopicToVote: boolean;
   createdBy: string;
   createdAt: Date;
 }

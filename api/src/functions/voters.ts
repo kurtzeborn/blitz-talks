@@ -4,6 +4,8 @@ import { requireAuth, AuthError } from '../shared/auth.js';
 import { VoterEntity } from '../shared/types.js';
 import { resolveSession, normalizeEmail, sanitizeText } from '../shared/helpers.js';
 
+const INITIAL_VOTES = 3;
+
 // GET /api/sessions/:id/voter
 app.http('getVoter', {
   methods: ['GET'],
@@ -59,7 +61,7 @@ app.http('registerVoter', {
 
       const result = await resolveSession(request, { requireActive: true });
       if ('error' in result) return result.error;
-      const { sessionId } = result;
+      const { sessionId, session } = result;
 
       let body: { displayName?: string } = {};
       try {
@@ -83,12 +85,15 @@ app.http('registerVoter', {
         if (error.statusCode !== 404) throw error;
       }
 
+      // Grant initial votes immediately if topic requirement is off
+      const grantVotes = session.requireTopicToVote === false;
+
       const entity: VoterEntity = {
         partitionKey: sessionId,
         rowKey: email,
         displayName: sanitizeText(displayName),
         topicsSubmitted: 0,
-        totalVotesGranted: 0,
+        totalVotesGranted: grantVotes ? INITIAL_VOTES : 0,
         votesUsed: 0,
         lastVoteGrantedAt: new Date(),
         registeredAt: new Date(),
@@ -102,7 +107,7 @@ app.http('registerVoter', {
           registered: true,
           displayName: entity.displayName,
           topicsSubmitted: 0,
-          totalVotesGranted: 0,
+          totalVotesGranted: entity.totalVotesGranted,
           votesUsed: 0,
         },
       };

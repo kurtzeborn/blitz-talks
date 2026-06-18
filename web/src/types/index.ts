@@ -3,6 +3,7 @@ export interface Session {
   name: string;
   status: 'active' | 'archived';
   voteIntervalMinutes: number;
+  requireTopicToVote: boolean;
   createdBy: string;
   createdAt: string;
 }
